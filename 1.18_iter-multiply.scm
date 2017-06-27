@@ -5,14 +5,13 @@
     (= (remainder n 2) 0))
 
 (define (* a b)
-    (if (= b 0)
-        0
-        (if (even? b)
-            (* (double a) (halve b))
-            (+ a (* a (- b 1)))
-        )
-    )
-)
+    (define (iter a b status)
+        (if (= b 0) status
+            (if (even? b)
+                (iter (double a) (halve b) status)
+                (iter a (- b 1) (+ status a))
+            )))
+    (iter a b 0))
 
 ; 2*7
 ; 2 + 2*6
