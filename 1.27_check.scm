@@ -1,0 +1,16 @@
+(define (expmod base exp m)
+    (cond ((= exp 0) 1)
+          ((even? exp)
+           (remainder (square (expmod base (/ exp 2) m)) m))
+          (else
+           (remainder (* base (expmod base (- exp 1) m)) m))))
+
+(define (check n)
+    (define (iterate a n)
+        (if (not (= (expmod a n n) a))
+            (and (display "Число ")
+                 (display n)
+                 (display " не простое")
+                 (newline))
+            (if (> a 0) (iterate (- a 1) n))))
+    (iterate (- n 1) n))
