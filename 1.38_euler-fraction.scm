@@ -11,10 +11,10 @@
     (define (d i)
         (define (not-one? i)
             (= (remainder (- i 2) 3) 0))
-        (define (threes-in-number i)
+        (define (remove-threes i)
             (- i (/ (- i (remainder i 3)) 3)))
         (if (not-one? i)
-            (threes-in-number i)
+            (remove-threes i)
             1))
 
     (cont-frac (lambda (i) 1.0)
