@@ -1,0 +1,47 @@
+; (expmod 2 5 5)
+; (remainder (* 2 (expmod 2 4 5)) 5)
+; (remainder (* 2 (remainder (square (expmod 2 2 5)) 5)) 5)
+; (remainder (* 2 (remainder (square (remainder (* 2 (expmod 2 1 5)) 5)) 5)) 5)
+; (remainder (* 2 (remainder (square (remainder (square (remainder (* 2 (expmod 2 0 5)) 5)) 5)) 5)) 5)
+; (remainder (* 2 (remainder (square (remainder (square (remainder (* 2 1) 5)) 5)) 5)) 5)
+; (remainder (* 2 (remainder (square (remainder (square (remainder 2 5)) 5)) 5)) 5)
+; (remainder (* 2 (remainder (square (remainder (square 2) 5)) 5)) 5)
+; (remainder (* 2 (remainder (square (remainder 4 5)) 5)) 5)
+; (remainder (* 2 (remainder (square 4) 5)) 5)
+; (remainder (* 2 (remainder 16 5)) 5)
+; (remainder (* 2 1) 5)
+; (remainder 2 5)
+; 2
+(define (expmod base exp m)
+    (cond ((= exp 0) 1)
+          ((even? exp)
+           (remainder (square (expmod base (/ exp 2) m)) m))
+          (else
+           (remainder (* base (expmod base (- exp 1) m)) m))))
+
+(define (unusual? x n)
+    (cond ((= x 1) false)
+          ((= x (- n 1)) false)
+          (else (= (remainder x n) 1))))
+
+(define (expmod-modified base exp m)
+    (cond ((= exp 0) 1)
+          ((even? exp)
+           (if (unusual? (expmod base (/ exp 2) m) m)
+               0
+               (remainder (square (expmod base (/ exp 2) m)) m)))
+          (else
+           (remainder (* base (expmod base (- exp 1) m)) m))))
+
+(define (fermat-test n)
+    (define (try-it a)
+        (= (expmod-modified a n n) a))
+    (try-it (+ 1 (random (- n 1)))))
+
+;(fermat-test 1106)
+(unusual? 10 1105)
+(unusual? 818 1105)
+(unusual? 849 1105)
+(unusual? 645 1105)
+(unusual? 445 1105)
+(unusual? 945 1105)
