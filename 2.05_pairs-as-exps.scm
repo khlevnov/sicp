@@ -16,6 +16,5 @@
         (logx z 3)
         (cdr (/ z 2))))
 
-(define z (cons 4 7))
-(car z)
-(cdr z)
+(car (cons 4 7))
+(cdr (cons 4 7))
