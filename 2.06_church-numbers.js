@@ -22,6 +22,8 @@ three = f => x => f((f => x => f(f(x)))(f)(x));
 three = f => x => f((x => f(f(x)))(x));
 three = f => x => f(f(f(x)));
 
+const sum = (n, m) => f => x => n(f)(m(f(x)));
+
 const churchToNumber = churchNumber => {
     const inc = x => x + 1;
     return churchNumber(inc)(0);

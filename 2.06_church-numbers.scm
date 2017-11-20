@@ -24,11 +24,11 @@
 (define four (lambda (f) (lambda (x) (f (f (f (f x)))))))
 (define five (lambda (f) (lambda (x) (f (f (f (f (f x))))))))
 
-(define (sum n1 n2)
-    (lambda (f) (lambda (x) ((n1 f) ((n2 f) x)))))
+(define (sum n m)
+    (lambda (f) (lambda (x) ((n f) ((m f) x)))))
 
-(define (mul n1 n2)
-    (lambda (x) (n1 (n2 x))))
+(define (mul n m)
+    (lambda (x) (n (m x))))
 
 (define (expt n exp)
     (exp n))
