@@ -19,7 +19,7 @@
     (make-rat-signed (* (numer x) (numer y))
                      (* (denom x) (denom y))))
 
-Check rational number creation
+;Check rational number creation
 (print-rat (make-rat-signed 1 2)) ; 1/2
 (print-rat (make-rat-signed -1 2)) ; -1/2
 (print-rat (make-rat-signed 1 -2)) ; -1/2
