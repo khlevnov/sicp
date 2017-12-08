@@ -27,6 +27,10 @@
     (make-interval (+ (lower-bound x) (lower-bound y))
         (+ (upper-bound x) (upper-bound y))))
 
+(define (sub-interval x y)
+    (make-interval (- (lower-bound x) (upper-bound y))
+        (- (upper-bound x) (lower-bound y))))
+
 (define (div-interval x y)
     (mul-interval x
         (make-interval (/ 1.0 (upper-bound y))
@@ -49,10 +53,23 @@
             (add-interval (div-interval one r1)
                 (div-interval one r2)))))
 
-(define i1 (make-center-percent 10 1))
-(define i2 (make-center-percent 10 1))
+(define i1 (make-center-percent 200 1))
+(define i2 (make-center-percent 100 2))
 
-(center (add-interval i1 i2))
-(center (mul-interval i1 i2))
-(percent (add-interval i1 i2))
-(percent (mul-interval i1 i2))
+; add-interval усредняет погрешность в сторону большего значения
+(define (percent-of-add i1 i2)
+    (let ((sum (+ (center i1) (center i2))))
+        (+ (* (/ (center i1) sum) (percent i1))
+           (* (/ (center i2) sum) (percent i2)))))
+
+; mul-interval складывает погрешности
+(define (percent-of-mul i1 i2)
+    (+ (percent i1) (percent i2)))
+
+; div-interval складывает погрешности
+(define (percent-of-div i1 i2)
+    (+ (percent i1) (percent i2)))
+
+(center (sub-interval i1 i2))
+(percent (sub-interval i1 i2))
+;(percent-of-sub i1 i2)
