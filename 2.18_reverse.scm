@@ -14,6 +14,13 @@
         items
         (cons (last-item items) (reverse (tail items)))))
 
+(define (reverse items)
+    (define (reverse-iter reveresed items)
+        (if (null? items)
+            reveresed
+            (reverse-iter (cons (car items) reveresed) (cdr items))))
+    (reverse-iter nil items))
+
 (reverse (list 1 4 9 16 25))
 
 ;(cons 25 (reverse (list 1 4 9 16)))
