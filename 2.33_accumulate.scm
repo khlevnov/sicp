@@ -15,6 +15,6 @@
 (map square (list 5 4 3 2 1))
 
 (define (length sequence)
-    (accumulate (lambda (x y) (+ x y)) 0 sequence))
+    (accumulate + 0 sequence))
 
 (length (list 1 2 3 4 5 6))

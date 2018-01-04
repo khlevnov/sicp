@@ -5,11 +5,9 @@
             (accumulate op initial (cdr sequence)))))
 
 (define (horner-eval x coefficient-sequence)
+    (newline)
     (accumulate (lambda (this-coeff higher-terms)
-                    (display (* this-coeff 1))
-                    (newline)
-                    (+ (* this-coeff (expt x (- (length coefficient-sequence) 1)))
-                       higher-terms))
+                    (+ (* x higher-terms) this-coeff))
                 0
                 coefficient-sequence))
 
