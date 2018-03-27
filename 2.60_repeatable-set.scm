@@ -1,0 +1,28 @@
+(define (element-of-set? x set)
+    (cond ((null? set) false)
+          ((equal? x (car set)) true)
+          (else (element-of-set? x (cdr set)))))
+(element-of-set? 1 '(3 4 1 2 1 7 1 8 9))
+(element-of-set? 1 '(3 4 5 2 5 3 4))
+; O(n)
+
+(define (adjoin-set x set) (cons x set))
+(adjoin-set 1 '(2 1 2 3))
+(adjoin-set 1 '(4 5 2 3))
+; O(1)
+
+(define (intersection-set set1 set2)
+    (cond ((or (null? set1) (null? set2)) '())
+          ((element-of-set? (car set1) set2)
+                (cons (car set1)
+                      (intersection-set (cdr set1) set2)))
+          (else (intersection-set (cdr set1) set2))))
+(intersection-set '(1 2 1 3 1 1) '(2 3 4 3 4 2))
+; O(n^2)
+
+(define (union-set set1 set2)
+    (if (null? set1)
+        set2
+        (union-set (cdr set1) (cons (car set1) set2))))
+(union-set '(1 2 1 3 1 1) '(2 3 4 3 4 2))
+; O(n)
