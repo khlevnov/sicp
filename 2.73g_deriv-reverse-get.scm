@@ -10,15 +10,6 @@
 (define (=number? exp num)
     (and (number? exp) (= exp num)))
 
-
-(define (deriv exp var)
-    (cond ((number? exp) 0)
-          ((variable? exp) (if (same-variable? exp var) 1 0))
-          (else ((get 'deriv (operator exp)) (operands exp) var))))
-(define (operator exp) (car exp))
-(define (operands exp) (cdr exp))
-
-
 (define (addend s) (car s))
 (define (augend s) (cadr s))
 (define (make-sum a1 a2)
@@ -43,23 +34,33 @@
       ((= e 1) b)
       (else (list '^ b e))))
 
+(define (deriv exp var)
+(cond ((number? exp) 0)
+      ((variable? exp) (if (same-variable? exp var) 1 0))
+      (else ((get (operator exp) 'deriv) (operands exp) var))))
+(define (operator exp) (car exp))
+(define (operands exp) (cdr exp))
+
+; sum module
 (define (deriv-sum exp var)
     (make-sum (deriv (addend exp) var)
               (deriv (augend exp) var)))
-(put 'deriv '+ deriv-sum)
+(put '+ 'deriv deriv-sum)
 
+; product module
 (define (deriv-product exp var)
     (make-sum
         (make-product (multiplier exp)
                       (deriv (multiplicand exp) var))
         (make-product (deriv (multiplier exp) var)
                       (multiplicand exp))))
-(put 'deriv '* deriv-product)
+(put '* 'deriv deriv-product)
 
+; exp module
 (define (deriv-exponentiation exp var)
     (make-product
         (exponent exp)
         (make-exponentiation var (- (exponent exp) 1))))
-(put 'deriv '^ deriv-exponentiation)
+(put '^ 'deriv deriv-exponentiation)
 
-(deriv '(^ x 4) 'x)
+(deriv '(* x 4) 'x)
