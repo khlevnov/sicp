@@ -211,7 +211,7 @@ function angle(z) {
         case 'polar':
             return anglePolar(contents(z));
         default:
-            throw new Error('Неизвестный тип -- MAGNITUDE', z);
+            throw new Error('Неизвестный тип -- ANGLE', z);
     }
 }
 function makeFromRealImag(x, y) {
@@ -220,3 +220,125 @@ function makeFromRealImag(x, y) {
 function makeFromMagAng(r, a) {
     return makeFromMagAngRectangular(r, a);
 }
+
+// 2.4.3 Data-directed programming
+var typesMap = new Map();
+function put(operation, type, f) {
+    for (const key of typesMap.keys()) {
+        if (JSON.stringify(key) === JSON.stringify(type)) {
+            typesMap.get(key).set(operation, f);
+            return;
+        }
+    }
+    typesMap.set(type, new Map());
+    typesMap.get(type).set(operation, f);
+}
+function get(operation, type) {
+    for (const key of typesMap.keys()) {
+        if (JSON.stringify(key) === JSON.stringify(type)) {
+            return typesMap.get(key).get(operation);
+        }
+    }
+    return false;
+}
+
+// Пакет Бена
+(function installRectangularPackage() {
+    function realPart(z) {
+        const [ real, imag ] = z;
+        return real;
+    }
+    function imagPart(z) {
+        const [ real, imag ] = z;
+        return imag;
+    }
+    function magnitude(z) {
+        return Math.sqrt(realPart(z) ** 2 + imagPart(z) ** 2);
+    }
+    function angle(z) {
+        return Math.atan(imagPart(z) / realPart(z));
+    }
+    function makeFromRealImag(x, y) {
+        return [ x, y ];
+    }
+    function makeFromMagAng(r, a) {
+        return [ r * Math.cos(a), r * Math.sin(a) ];
+    }
+    // Интерфейс к остальной системе
+    function tag(x) {
+        return attachTag('rectangular', x);
+    }
+    put('realPart', ['rectangular'], realPart);
+    put('imagPart', ['rectangular'], imagPart);
+    put('magnitude', ['rectangular'], magnitude);
+    put('angle', ['rectangular'], angle);
+    put('makeFromRealImag', 'rectangular', (x, y) => tag(makeFromRealImag(x, y)));
+    put('makeFromMagAng', 'rectangular', (r, a) => tag(makeFromMagAng(r, a)));
+})();
+
+// Пакет Лизы
+(function installRectangularPackage() {
+    function realPart(z) {
+        return magnitude(z) * Math.cos(angle(z));
+    }
+    function imagPart(z) {
+        return magnitude(z) * Math.sin(angle(z));
+    }
+    function magnitude(z) {
+        const [ magnitude, angle ] = z;
+        return magnitude;
+    }
+    function angle(z) {
+        const [ magnitude, angle ] = z;
+        return angle;
+    }
+    function makeFromRealImag(x, y) {
+        return [ Math.sqrt(x ** 2 + y ** 2), Math.atan(y / x) ];
+    }
+    function makeFromMagAng(r, a) {
+        return [ r, a ];
+    }
+    // Интерфейс к остальной системе
+    function tag(x) {
+        return attachTag('polar', x);
+    }
+    put('realPart', ['polar'], realPart);
+    put('imagPart', ['polar'], imagPart);
+    put('magnitude', ['polar'], magnitude);
+    put('angle', ['polar'], angle);
+    put('makeFromRealImag', 'polar', (x, y) => tag(makeFromRealImag(x, y)));
+    put('makeFromMagAng', 'polar', (r, a) => tag(makeFromMagAng(r, a)));
+})();
+
+function makeFromRealImag(x, y) {
+    return get('makeFromRealImag', 'rectangular')(x, y);
+}
+function makeFromMagAng(r, a) {
+    return get('makeFromMagAng', 'polar')(r, a);
+}
+
+function applyGeneric(operation, ...args) {
+    const typeTags = args.map(typeTag);
+    const f = get(operation, typeTags);
+    if (!f) {
+        throw new Error('Нет метода для этих типов -- APPLY-GENERIC', operation, args);
+    }
+    return f.apply(null, args.map(contents));
+    // можно так еще, эпплай не нужен
+    // return f(...args.map(contents))
+}
+function realPart(z) {
+    return applyGeneric('realPart', z);
+}
+function imagPart(z) {
+    return applyGeneric('imagPart', z);
+}
+function magnitude(z) {
+    return applyGeneric('magnitude', z);
+}
+function angle(z) {
+    return applyGeneric('angle', z);
+}
+
+var z = makeFromRealImag(3, 4);
+realPart(z);
