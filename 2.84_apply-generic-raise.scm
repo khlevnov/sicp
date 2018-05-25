@@ -204,31 +204,23 @@
     ((get 'make-from-mag-ang 'complex) r a))
 
 (define (apply-generic op . original-args)
-    (define (convert-args type-to-convert args)
-        (if (null? args)
-            '()
-            (let ((current-type (type-tag (car args))))
-                (if (equal? current-type type-to-convert)
-                    (cons (car args) (convert-args type-to-convert (cdr args)))
-                    (let ((convert (get-coercion current-type type-to-convert)))
-                         (if convert
-                             (cons (convert (car args))
-                                   (convert-args type-to-convert (cdr args)))
-                             (cons (car args)
-                                   (convert-args type-to-convert (cdr args)))))))))
+    (define (raise-args args)
+        (list (raise (raise (raise (car args))))
+              (cadr args)
+              ; (raise (raise (caddr args))))))
+              (raise (raise (raise (caddr args))))))
 
     (define (apply-generic-iter op arg-number . args)
         (let ((type-tags (map type-tag args)))
             (let ((proc (get op type-tags)))
                  (if proc
                      (apply proc (map contents args))
-                     (if (<= arg-number (length args))
-                         (apply apply-generic-iter
-                             (append
-                                (list op (+ arg-number 1))
-                                (convert-args (car type-tags)
-                                              (append (cdr args) (list (car args))))))
-                         (error "Нет функции после преобразований" (list op type-tags)))))))
+                     (let ((same-type-args (raise-args args)))
+                          (let ((same-type-tags (map type-tag same-type-args)))
+                               (let ((same-type-proc (get op same-type-tags)))
+                                    (if same-type-proc
+                                        (apply same-type-proc (map contents same-type-args))))
+                                        (error "Нет функции после преобразований" (list op same-type-tags))))))))
     (apply apply-generic-iter (append (list op 1) original-args)))
 
 (install-integer-package)
@@ -242,7 +234,7 @@
     (let ((type (type-tag x)))
          (cond ((equal? type 'integer) (make-rational x 1))
                ((equal? type 'rational) (make-real (/ (numer x) (denom x))))
-               ((equal? type 'real) (make-from-real-imag x 0))
+               ((equal? type 'real) (make-complex-from-real-imag x 0))
                (else x))))
 
 (define (raise x) (apply-generic 'raise x))
@@ -250,6 +242,6 @@
 (put 'raise '(rational) (lambda (x)
     (make-real (/ (numer (attach-tag 'rational x))
                   (denom (attach-tag 'rational x))))))
-(put 'raise '(real) (lambda (x) (make-from-real-imag x 0)))
+(put 'raise '(real) (lambda (x) (make-complex-from-real-imag x 0)))
 
-(raise (raise (raise 1)))
+(add3 1 (make-complex-from-real-imag 2 3) 4)
