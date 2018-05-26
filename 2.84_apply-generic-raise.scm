@@ -203,25 +203,63 @@
 (define (make-complex-from-mag-ang r a)
     ((get 'make-from-mag-ang 'complex) r a))
 
-(define (apply-generic op . original-args)
-    (define (raise-args args)
-        (list (raise (raise (raise (car args))))
-              (cadr args)
-              ; (raise (raise (caddr args))))))
-              (raise (raise (raise (caddr args))))))
 
-    (define (apply-generic-iter op arg-number . args)
-        (let ((type-tags (map type-tag args)))
-            (let ((proc (get op type-tags)))
-                 (if proc
-                     (apply proc (map contents args))
-                     (let ((same-type-args (raise-args args)))
-                          (let ((same-type-tags (map type-tag same-type-args)))
-                               (let ((same-type-proc (get op same-type-tags)))
-                                    (if same-type-proc
-                                        (apply same-type-proc (map contents same-type-args))))
-                                        (error "Нет функции после преобразований" (list op same-type-tags))))))))
-    (apply apply-generic-iter (append (list op 1) original-args)))
+(define (raise-args args)
+    (define (same-types? args)
+        (if (= (length args) 1)
+            true
+            (let ((first-type (type-tag (car args)))
+                  (second-type (type-tag (cadr args))))
+                 (if (not (equal? first-type second-type))
+                     false
+                     (if (= (length args) 2)
+                         true
+                         (same-types? (cdr args)))))))
+
+    (define (raise-pair a b)
+        (define (raise-first a b)
+            (if (same-types? (list a b))
+                (list a b)
+                (let ((raised-a (raise a)))
+                     (if raised-a
+                         (raise-first raised-a b)
+                         false))))
+        (define (raise-second a b)
+            (if (same-types? (list a b))
+                (list a b)
+                (let ((raised-b (raise b)))
+                     (if raised-b
+                         (raise-second a raised-b)
+                         false))))
+        (if (same-types? (list a b))
+            (list a b)
+            (let ((raised-first (raise-first a b))
+                  (raised-second (raise-second a b)))
+                 (cond (raised-first raised-first)
+                       (raised-second raised-second)
+                       (else '())))))
+
+    (if (same-types? args)
+        args
+        (let ((raised-pair (raise-pair (car args) (cadr args))))
+             (if (= (length args) 2)
+                 raised-pair
+                 (raise-args (cons (car raised-pair)
+                                   (raise-args (cons (cadr raised-pair)
+                                                     (cddr args)))))))))
+
+(define (apply-generic op . args)
+    (let ((type-tags (map type-tag args)))
+        (let ((proc (get op type-tags)))
+             (if proc
+                 (apply proc (map contents args))
+                 (let ((same-type-args (raise-args args)))
+                      (let ((same-type-tags (map type-tag same-type-args)))
+                           (let ((same-type-proc (get op same-type-tags)))
+                                (if same-type-proc
+                                    (apply same-type-proc (map contents same-type-args))
+                                    (error "Нет функции после преобразований" (list op same-type-tags))
+                                    ))))))))
 
 (install-integer-package)
 (install-real-package)
@@ -235,13 +273,14 @@
          (cond ((equal? type 'integer) (make-rational x 1))
                ((equal? type 'rational) (make-real (/ (numer x) (denom x))))
                ((equal? type 'real) (make-complex-from-real-imag x 0))
-               (else x))))
+               (else false))))
 
 (define (raise x) (apply-generic 'raise x))
-(put 'raise '(integer)  (lambda (x) (make-rational x 1)))
+(put 'raise '(integer) (lambda (x) (make-rational x 1)))
 (put 'raise '(rational) (lambda (x)
     (make-real (/ (numer (attach-tag 'rational x))
                   (denom (attach-tag 'rational x))))))
 (put 'raise '(real) (lambda (x) (make-complex-from-real-imag x 0)))
+(put 'raise '(complex) (lambda (x) false))
 
-(add3 1 (make-complex-from-real-imag 2 3) 4)
+(add3 1 2 (make-complex-from-real-imag 3 0))
