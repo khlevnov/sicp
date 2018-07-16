@@ -326,13 +326,14 @@
 (put 'project '(polynomial) (lambda (x) false))
 
 (define (indentity x) x)
-(define (drop x)
-    (let ((dropped (project x)))
-         (if dropped
-             (if (equ? x (raise dropped))
-                 (drop dropped)
-                 x)
-             x)))
+(define (drop x) x)
+; (define (drop x)
+;     (let ((dropped (project x)))
+;          (if dropped
+;              (if (equ? x (raise dropped))
+;                  (drop dropped)
+;                  x)
+;              x)))
 
 ; Polynomial commons
 (define (variable? x) (symbol? x))
@@ -364,6 +365,7 @@
     (put 'rest-terms '(dense) (lambda (term-list) (tag (rest-terms term-list))))
     (put 'empty-termlist? '(dense) empty-termlist?)
     (put 'raise '(dense) (lambda (x) false))
+    (put 'project '(dense) (lambda (x) false))
     'done)
 
 ; ***********
@@ -377,14 +379,11 @@
     (define (first-term term-list) (car term-list))
     (define (rest-terms term-list) (cdr term-list))
     (define (empty-termlist? term-list) (null? term-list))
-    (define (adjoin-term term term-list)
-        (display "\n")
-        (display term)
-        (display "\n")
-        (display term-list)
-        (if (=zero? (coeff term))
-            term-list
-            (cons term term-list)))
+    (define (adjoin-term term-list)
+        (lambda (term)
+            (if (=zero? (car term))
+                term-list
+                (cons term term-list))))
 
     (define (tag term-list) (attach-tag 'sparse term-list))
     (put 'make-polynomial 'sparse (lambda (variable term-list)
@@ -394,17 +393,24 @@
     (put 'first-term '(sparse) first-term)
     (put 'rest-terms '(sparse) (lambda (term-list) (tag (rest-terms term-list))))
     (put 'empty-termlist? '(sparse) empty-termlist?)
-    (put 'adjoin-term '(sparse) adjoin-term)
+    (put 'adjoin-term '(sparse)
+        (lambda (term-list)
+            (lambda (term)
+                (tag ((adjoin-term term-list) term)))))
     (put 'raise '(sparse) (lambda (x) false))
+    (put 'project '(sparse) (lambda (x) false))
     'done)
 
 (define (variable polynomial) (apply-generic 'variable polynomial))
 (define (term-list polynomial) (apply-generic 'term-list polynomial))
 (define (first-term term-list) (apply-generic 'first-term term-list))
 (define (rest-terms term-list) (apply-generic 'rest-terms term-list))
-(define (the-empty-termlist) '())
 (define (empty-termlist? term-list) (apply-generic 'empty-termlist? term-list))
-(define (adjoin-term term term-list) (apply-generic 'adjoin-term term term-list))
+(define (adjoin-term term-list) (apply-generic 'adjoin-term (car term-list)))
+(define (the-empty-termlist) '())
+(define (make-term coeff order) (list coeff order))
+(define (coeff term) (car term))
+(define (order term) (cadr term))
 
 ; *******************
 ;
@@ -428,38 +434,37 @@
         ((get 'make-polynomial 'sparse) variable term-list))
     (define (make-dense-polynomial variable term-list)
         ((get 'make-polynomial 'dense) variable term-list))
-    (define make-poly make-sparse-polynomial)
-
-    (define (make-term coeff order) (list coeff order))
-    (define (coeff term) (car term))
-    (define (order term) (cadr term))
+    (define (make-polynomial variable term-list)
+        (make-sparse-polynomial variable (contents term-list)))
 
     (define (add-poly p1 p2)
         (if (same-variable? (variable p1) (variable p2))
-           (make-poly
+            (make-polynomial
                 (variable p1)
                 (add-terms (term-list p1)
                            (term-list p2)))
-           (error "Многочлены от разных переменных -- ADD-POLY"
-               (list p1 p2))))
+            (error "Многочлены от разных переменных -- ADD-POLY"
+                (list p1 p2))))
 
     (define (add-terms L1 L2)
-        (cond ((empty-termlist? L1) (rest-terms L2))
-              ((empty-termlist? L2) (rest-terms L1))
+        (cond ((empty-termlist? L1) L2)
+              ((empty-termlist? L2) L1)
               (else
                   (let ((t1 (first-term L1)) (t2 (first-term L2)))
                        (cond ((> (order t1) (order t2))
-                              (adjoin-term
-                                  t1 (add-terms (rest-terms L1) L2)))
+                              ((adjoin-term
+                                  (add-terms (rest-terms L1) L2))
+                                  t1))
                              ((< (order t1) (order t2))
-                              (adjoin-term
-                                  t2 (add-terms L1 (rest-terms L2))))
+                              ((adjoin-term
+                                  (add-terms L1 (rest-terms L2)))
+                                  t2))
                              (else
-                              (adjoin-term
-                                  (make-term (order t1)
-                                             (add (coeff t1) (coeff t2)))
+                              ((adjoin-term
                                   (add-terms (rest-terms L1)
-                                             (rest-terms L2)))))))))
+                                             (rest-terms L2)))
+                                  (make-term (add (coeff t1) (coeff t2))
+                                             (order t1)))))))))
 
     (define (sub-poly p1 p2)
         (if (same-variable? (variable p1) (variable p2))
@@ -478,13 +483,13 @@
                                   t1 (sub-terms (rest-terms L1) L2)))
                              ((< (order t1) (order t2))
                               (adjoin-term
-                                  (make-term (order t2)
-                                             (convert-sign (coeff t2)))
+                                  (make-term (convert-sign (coeff t2))
+                                             (order t2))
                                   (sub-terms L1 (rest-terms L2))))
                              (else
                               (adjoin-term
-                                  (make-term (order t1)
-                                             (sub (coeff t1) (coeff t2)))
+                                  (make-term (sub (coeff t1) (coeff t2))
+                                             (order t1))
                                   (sub-terms (rest-terms L1)
                                              (rest-terms L2)))))))))
 
@@ -540,8 +545,8 @@
                        ((zero-termlist? term-list) true)
                        (else false)))))
 
-    (put 'project '(polynomial) (lambda (x) false))
     (put 'raise '(polynomial) (lambda (x) false))
+    (put 'project '(polynomial) (lambda (x) false))
     'done)
 
 (define (make-sparse-polynomial variable term-list)
@@ -553,6 +558,8 @@
 (install-dense-polynomial-package)
 (install-polynomial-package)
 
-(define sparse (make-sparse-polynomial 'x (list '(2 4) '(7 3) '(4 2) '(3 1))))
+(define sparse1 (make-sparse-polynomial 'x (list '(2 4) '(7 3) '(4 2) '(3 1))))
+(define sparse2 (make-sparse-polynomial 'x (list '(7 2) '(3 1))))
 (define dense (make-dense-polynomial 'x (list 2 7 4 3 42)))
-(add sparse (make-sparse-polynomial 'x (the-empty-termlist)))
+(define dense (make-dense-polynomial 'x (list 2 7 4 3 42)))
+(add sparse1 sparse2)
