@@ -547,9 +547,11 @@
 
     (define (div-poly p1 p2)
         (if (same-variable? (variable p1) (variable p2))
-            (make-poly (variable p1)
-                       (div-terms (term-list p1)
-                                  (term-list p2)))
+            (let ((result (div-terms (term-list p1)
+                                     (term-list p2))))
+                 (list
+                     (make-poly (variable p1) (car result))
+                     (make-poly (variable p1) (cadr result))))
             (error "Многочлены от разных переменных -- DIV-POLY"
                 (list p1 p2))))
 
@@ -569,20 +571,9 @@
                                         (sub-terms L1
                                             (mul-term-by-all-terms new-term L2))
                                         L2)))
-                                ; <финальный результат>
-                                (let ((previous-result (cadr rest-of-result))
-                                      (chastnoe
-                                            (if (null? (cddr rest-of-result))
-                                                (the-empty-termlist)
-                                                (cddr rest-of-result))))
-                                     ;(display (cddr rest-of-result))
-                                     ; (append rest-of-result
-                                     ;        ((adjoin-term chastnoe) new-term))
-                                     (list 8 9))
-                                (list 6 7)
-                            ))))))
-            ; ((adjoin-term (the-empty-termlist)) (make-term 8 8))
-            ; ((adjoin-term (the-empty-termlist)) (make-term 9 9))))
+                                (list ((adjoin-term (car rest-of-result))
+                                                new-term)
+                                      (cadr rest-of-result))))))))
 
     (define (tag p) (attach-tag 'polynomial p))
     (put 'make-sparse-polynomial 'polynomial (lambda (variable term-list)
@@ -611,8 +602,8 @@
 (define (make-dense-polynomial variable term-list)
     ((get 'make-dense-polynomial 'polynomial) variable term-list))
 
-(install-sparse-polynomial-package)
 (install-dense-polynomial-package)
+(install-sparse-polynomial-package)
 (install-polynomial-package)
 
 (define sparse1 (make-sparse-polynomial 'x (list '(1 5) '(-1 0))))
