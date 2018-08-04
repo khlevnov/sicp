@@ -636,33 +636,56 @@
                     (the-empty-termlist))))
 
         (define (simplify p)
+            (define (merge-terms t1 t2)
+                (make-term
+                    (make-polynomial
+                        (variable (coeff t1))
+                        ((adjoin-term
+                            (term-list (coeff t1)))
+                            (first-term
+                                (term-list (coeff t2)))))
+                    (order t1)))
+
             (define (simplify-iter terms simplified)
+                ; (display terms)
+                ; (display "\n")
+                ; (display simplified)
+                ; (display "\n")
+                ; (display "\n")
                 (if (empty-termlist? terms)
                     simplified
-                    (simplify-iter
-                        (rest-terms terms)
-                        (cond
-                            ((or
-                                (empty-termlist? simplified)
-                                (> (order (first-term terms))
-                                   (order (first-term simplified))))
+                    (cond
+                        ((or
+                            (empty-termlist? simplified)
+                            (> (order (first-term terms))
+                               (order (first-term simplified))))
+                            (simplify-iter
+                                (rest-terms terms)
                                 ((adjoin-term simplified)
-                                    (first-term terms)))
-                            ((< (order (first-term terms))
-                                (order (first-term simplified)))
+                                    (first-term terms))))
+
+                        ((< (order (first-term terms))
+                            (order (first-term simplified)))
+                            ((adjoin-term
+                                (simplify-iter
+                                    terms
+                                    (rest-terms simplified)))
+                                (first-term simplified)))
+
+                        ((= (order (first-term terms))
+                            (order (first-term simplified)))
+                            (simplify-iter
+                                (rest-terms terms)
                                 ((adjoin-term
-                                    (simplify-iter
-                                        terms
-                                        (rest-terms simplified)))
-                                    (first-term simplified)))
-                            ((= (order (first-term terms))
-                                (order (first-term simplified)))
-                                simplified)
-                                ; ((adjoin-term simplified)
-                                ;     (first-term terms)))
-                            (else
-                                simplified)))
-                        ))
+                                    (rest-terms simplified))
+                                    (merge-terms
+                                        (first-term terms)
+                                        (first-term simplified)))))
+                        ; (else
+                        ;     simplified)
+                    )
+                )
+            )
             (make-polynomial (variable p)
                 (simplify-iter
                     (term-list p)
