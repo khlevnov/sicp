@@ -578,7 +578,7 @@
 
     (define (to-variable v p)
         (define (expand p)
-            (define (expand-iter terms expanded-term-list)
+            (define (expand-iter terms expanded)
                 (define (expand-polynomial terms order expanded)
                     (if (empty-termlist? terms)
                         expanded
@@ -593,16 +593,18 @@
                                             (first-term terms)))
                                     order)))))
                 (if (empty-termlist? terms)
-                    expanded-term-list
+                    expanded
                     (expand-iter
                         (rest-terms terms)
                         (expand-polynomial
                             (term-list (coeff (first-term terms)))
                             (order (first-term terms))
-                            expanded-term-list))))
-            (make-polynomial
-                (variable p)
-                (expand-iter (term-list p) (the-empty-termlist))))
+                            expanded))))
+
+            (make-polynomial (variable p)
+                (expand-iter
+                    (term-list p)
+                    (the-empty-termlist))))
 
         (define (invert p)
             (define (invert-term term)
@@ -641,17 +643,12 @@
                     (make-polynomial
                         (variable (coeff t1))
                         ((adjoin-term
-                            (term-list (coeff t1)))
+                            (term-list (coeff t2)))
                             (first-term
-                                (term-list (coeff t2)))))
+                                (term-list (coeff t1)))))
                     (order t1)))
 
             (define (simplify-iter terms simplified)
-                ; (display terms)
-                ; (display "\n")
-                ; (display simplified)
-                ; (display "\n")
-                ; (display "\n")
                 (if (empty-termlist? terms)
                     simplified
                     (cond
@@ -666,11 +663,14 @@
 
                         ((< (order (first-term terms))
                             (order (first-term simplified)))
-                            ((adjoin-term
-                                (simplify-iter
-                                    terms
-                                    (rest-terms simplified)))
-                                (first-term simplified)))
+                            (simplify-iter
+                                (rest-terms terms)
+                                ((adjoin-term
+                                    (simplify-iter
+                                        ((adjoin-term (the-empty-termlist))
+                                            (first-term terms))
+                                        (rest-terms simplified)))
+                                    (first-term simplified))))
 
                         ((= (order (first-term terms))
                             (order (first-term simplified)))
@@ -680,27 +680,16 @@
                                     (rest-terms simplified))
                                     (merge-terms
                                         (first-term terms)
-                                        (first-term simplified)))))
-                        ; (else
-                        ;     simplified)
-                    )
-                )
-            )
+                                        (first-term simplified))))))))
             (make-polynomial (variable p)
                 (simplify-iter
                     (term-list p)
                     (the-empty-termlist))))
 
-    (simplify
-        (invert
-            (expand p))))
+    ;(simplify
+    ;    (invert
+            (expand p));))
 
-    ;((polynomial sparse x (3 2)) 1)
-    ;((polynomial sparse x (1 2)) 0)
-    ;((polynomial sparse x (7 1)) 2)
-    ;((polynomial sparse x (8 1)) 1)
-    ;((polynomial sparse x (3 0)) 1)
-    ;((polynomial sparse x (4 0)) 0))
 
     (define (tag p) (attach-tag 'polynomial p))
     (put 'make-sparse-polynomial 'polynomial (lambda (variable term-list)
@@ -742,13 +731,18 @@
 (install-sparse-polynomial-package)
 (install-polynomial-package)
 
-; (3y + 1)x**2 + (7y**2 + 8y)x + (3y + 4)
-(define coeff-with-2 (make-sparse-polynomial 'y (list '(3 1) '(1 0))))
+; (5y + 1)x**2 + (7y**2 + 8y)x + (3y + 4)
+; (5y + 1)x**2 + 42x + (3y + 4)
+; TODO Make this functionality with unpolynomial coefficients
+; TODO Add coefficients sortings in subpolynoms
+(define coeff-with-2 (make-sparse-polynomial 'y (list '(5 1) '(1 0))))
 (define coeff-with-1 (make-sparse-polynomial 'y (list '(7 2) '(8 1))))
 (define coeff-free (make-sparse-polynomial 'y (list '(3 1) '(4 0))))
 (define polynomial-by-x
-    (make-sparse-polynomial 'x (list (list coeff-with-2 2)
-                                     (list coeff-with-1 1)
-                                     (list coeff-free 0))))
+    (make-sparse-polynomial 'x (list
+        (list coeff-with-2 2)
+        (list 42 1)
+        (list coeff-free 0)
+    )))
 
 (to-variable 'y polynomial-by-x)
