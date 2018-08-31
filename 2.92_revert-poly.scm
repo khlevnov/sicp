@@ -639,14 +639,55 @@
 
         (define (simplify p)
             (define (merge-terms t1 t2)
-                (make-term
-                    (make-polynomial
-                        (variable (coeff t1))
-                        ((adjoin-term
-                            (term-list (coeff t2)))
-                            (first-term
-                                (term-list (coeff t1)))))
-                    (order t1)))
+                (cond
+                    ((empty-termlist? (term-list (coeff t2)))
+                        (make-term
+                            (make-polynomial
+                                (variable (coeff t1))
+                                ((adjoin-term
+                                    (term-list (coeff t2)))
+                                    (first-term
+                                        (term-list (coeff t1)))))
+                            (order t1)))
+
+                    ((= (order (first-term (term-list (coeff t1))))
+                        (order (first-term (term-list (coeff t2)))))
+                        (make-term
+                            (make-polynomial
+                                (variable (coeff t1))
+                                ((adjoin-term
+                                    (rest-terms (term-list (coeff t2))))
+                                    (make-term
+                                        (add (coeff (first-term (term-list (coeff t1))))
+                                             (coeff (first-term (term-list (coeff t2)))))
+                                        (order (first-term (term-list (coeff t1)))))))
+                            (order t1)))
+
+                    ((< (order (first-term (term-list (coeff t1))))
+                        (order (first-term (term-list (coeff t2)))))
+                        (make-term
+                            (make-polynomial
+                                (variable (coeff t1))
+                                ((adjoin-term
+                                    (term-list (coeff (merge-terms
+                                        t1
+                                        (make-term
+                                            (make-polynomial
+                                                (variable (coeff t2))
+                                                (rest-terms (term-list (coeff t2))))
+                                            (order t2))))))
+                                    (first-term (term-list (coeff t2)))))
+                            (order t1)))
+
+                    (else
+                        (make-term
+                            (make-polynomial
+                                (variable (coeff t1))
+                                ((adjoin-term
+                                    (term-list (coeff t2)))
+                                    (first-term
+                                        (term-list (coeff t1)))))
+                            (order t1)))))
 
             (define (simplify-iter terms simplified)
                 (if (empty-termlist? terms)
@@ -686,9 +727,9 @@
                     (term-list p)
                     (the-empty-termlist))))
 
-    ;(simplify
-    ;    (invert
-            (expand p));))
+    (simplify
+        (invert
+            (expand p))))
 
 
     (define (tag p) (attach-tag 'polynomial p))
@@ -734,14 +775,13 @@
 ; (5y + 1)x**2 + (7y**2 + 8y)x + (3y + 4)
 ; (5y + 1)x**2 + 42x + (3y + 4)
 ; TODO Make this functionality with unpolynomial coefficients
-; TODO Add coefficients sortings in subpolynoms
-(define coeff-with-2 (make-sparse-polynomial 'y (list '(5 1) '(1 0))))
+(define coeff-with-2 (make-sparse-polynomial 'y (list '(5 1) '(6 1) '(1 0))))
 (define coeff-with-1 (make-sparse-polynomial 'y (list '(7 2) '(8 1))))
-(define coeff-free (make-sparse-polynomial 'y (list '(3 1) '(4 0))))
+(define coeff-free (make-sparse-polynomial 'y (list '(8 2) '(3 1) '(4 0))))
 (define polynomial-by-x
     (make-sparse-polynomial 'x (list
         (list coeff-with-2 2)
-        (list 42 1)
+        (list coeff-with-1 1)
         (list coeff-free 0)
     )))
 
