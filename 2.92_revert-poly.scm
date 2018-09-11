@@ -464,8 +464,9 @@
                 (variable p1)
                 (add-terms (term-list p1)
                            (term-list p2)))
-            (error "Многочлены от разных переменных -- ADD-POLY"
-                (list p1 p2))))
+            (add-poly
+                (polyfy p1)
+                (to-variable (variable p1) p2))))
 
     (define (add-terms L1 L2)
         (cond ((empty-termlist? L1) L2)
@@ -494,8 +495,9 @@
                 (variable p1)
                 (sub-terms (term-list p1)
                            (term-list p2)))
-            (error "Многочлены от разных переменных -- SUB-POLY"
-                (list p1 p2))))
+            (sub-poly
+                (polyfy p1)
+                (to-variable (variable p1) p2))))
 
     (define (sub-terms L1 L2)
         (cond ((empty-termlist? L2) L1)
@@ -527,8 +529,9 @@
             (make-poly (variable p1)
                        (mul-terms (term-list p1)
                                   (term-list p2)))
-            (error "Многочлены от разных переменных -- MUL-POLY"
-                (list p1 p2))))
+            (sub-poly
+                (polyfy p1)
+                (to-variable (variable p1) p2))))
 
     (define (mul-terms L1 L2)
         (if (empty-termlist? L1)
@@ -552,8 +555,9 @@
                  (list
                      (make-poly (variable p1) (car result))
                      (make-poly (variable p1) (cadr result))))
-            (error "Многочлены от разных переменных -- DIV-POLY"
-                (list p1 p2))))
+            (div-poly
+                (polyfy p1)
+                (to-variable (variable p1) p2))))
 
     (define (div-terms L1 L2)
         (if (empty-termlist? L1)
@@ -575,6 +579,32 @@
                                                 new-term)
                                       (cadr rest-of-result))))))))
 
+    (define (map-poly f p)
+        (define (iterate terms mapped)
+            (if (empty-termlist? terms)
+                mapped
+                (iterate
+                    (rest-terms terms)
+                    ((adjoin-term mapped)
+                        (f (first-term terms))))))
+        (make-polynomial
+            (variable p)
+            (iterate
+                (term-list p)
+                (the-empty-termlist))))
+
+    (define (polyfy p)
+        (define (number-to-poly x)
+            (if (equal? (type-tag (coeff x)) 'polynomial)
+                x
+                (make-term
+                    (make-polynomial (variable p)
+                        ((adjoin-term (the-empty-termlist))
+                            (make-term (coeff x) 0)))
+                    (order x))))
+        (map-poly
+            number-to-poly
+            p))
 
     (define (to-variable v p)
         (define (expand p)
@@ -727,33 +757,6 @@
                     (term-list p)
                     (the-empty-termlist))))
 
-        (define (map-poly f p)
-            (define (iterate terms mapped)
-                (if (empty-termlist? terms)
-                    mapped
-                    (iterate
-                        (rest-terms terms)
-                        ((adjoin-term mapped)
-                            (f (first-term terms))))))
-            (make-polynomial
-                (variable p)
-                (iterate
-                    (term-list p)
-                    (the-empty-termlist))))
-
-        (define (polyfy p)
-            (define (number-to-poly x)
-                (if (equal? (type-tag (coeff x)) 'polynomial)
-                    x
-                    (make-term
-                        (make-polynomial (variable p)
-                            ((adjoin-term (the-empty-termlist))
-                                (make-term (coeff x) 0)))
-                        (order x))))
-            (map-poly
-                number-to-poly
-                p))
-
         (simplify
             (invert
                 (expand
@@ -776,6 +779,14 @@
     (put 'to-variable '(polynomial)
         (lambda (p)
             (lambda (v) (to-variable v p))))
+    (put 'convert-sign '(polynomial)
+        (lambda (p)
+            (map-poly
+                (lambda (term)
+                    (make-term
+                        (convert-sign (coeff term))
+                        (order term)))
+                p)))
 
     (put 'add '(polynomial polynomial) (lambda (p1 p2) (tag (add-poly p1 p2))))
     (put 'sub '(polynomial polynomial) (lambda (p1 p2) (tag (sub-poly p1 p2))))
@@ -802,9 +813,11 @@
 
 ; (5y + 1)x**2 + (7y**2 + 8y)x + (3y + 4)
 ; (5y + 1)x**2 + 42x + (3y + 4)
-(define coeff-with-2 (make-sparse-polynomial 'y (list '(5 1) '(6 1) '(1 0))))
+; (5x**2 + 3) + (1 + 42x + 4)
+(define coeff-with-2 (make-sparse-polynomial 'y (list '(5 1) '(1 0))))
 (define coeff-with-1 (make-sparse-polynomial 'y (list '(7 2) '(8 1))))
-(define coeff-free (make-sparse-polynomial 'y (list '(8 2) '(3 1) '(4 0))))
+(define coeff-free (make-sparse-polynomial 'y (list '(3 1) '(4 0))))
+
 (define polynomial-by-x
     (make-sparse-polynomial 'x (list
         (list coeff-with-2 2)
@@ -812,4 +825,11 @@
         (list coeff-free 0)
     )))
 
-(to-variable 'y polynomial-by-x)
+(define polynomial-by-y
+    (make-sparse-polynomial 'y (list
+        (list (make-sparse-polynomial 'x (list '(5 1) '(1 0))) 2)
+        (list 56 1)
+        (list (make-sparse-polynomial 'x (list '(3 1) '(4 0))) 0)
+    )))
+
+(sub polynomial-by-x polynomial-by-y)
