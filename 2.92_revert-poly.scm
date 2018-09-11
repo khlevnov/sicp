@@ -727,9 +727,37 @@
                     (term-list p)
                     (the-empty-termlist))))
 
-    (simplify
-        (invert
-            (expand p))))
+        (define (map-poly f p)
+            (define (iterate terms mapped)
+                (if (empty-termlist? terms)
+                    mapped
+                    (iterate
+                        (rest-terms terms)
+                        ((adjoin-term mapped)
+                            (f (first-term terms))))))
+            (make-polynomial
+                (variable p)
+                (iterate
+                    (term-list p)
+                    (the-empty-termlist))))
+
+        (define (polyfy p)
+            (define (number-to-poly x)
+                (if (equal? (type-tag (coeff x)) 'polynomial)
+                    x
+                    (make-term
+                        (make-polynomial (variable p)
+                            ((adjoin-term (the-empty-termlist))
+                                (make-term (coeff x) 0)))
+                        (order x))))
+            (map-poly
+                number-to-poly
+                p))
+
+        (simplify
+            (invert
+                (expand
+                    (polyfy p)))))
 
 
     (define (tag p) (attach-tag 'polynomial p))
@@ -774,14 +802,13 @@
 
 ; (5y + 1)x**2 + (7y**2 + 8y)x + (3y + 4)
 ; (5y + 1)x**2 + 42x + (3y + 4)
-; TODO Make this functionality with unpolynomial coefficients
 (define coeff-with-2 (make-sparse-polynomial 'y (list '(5 1) '(6 1) '(1 0))))
 (define coeff-with-1 (make-sparse-polynomial 'y (list '(7 2) '(8 1))))
 (define coeff-free (make-sparse-polynomial 'y (list '(8 2) '(3 1) '(4 0))))
 (define polynomial-by-x
     (make-sparse-polynomial 'x (list
         (list coeff-with-2 2)
-        (list coeff-with-1 1)
+        (list 42 1)
         (list coeff-free 0)
     )))
 
